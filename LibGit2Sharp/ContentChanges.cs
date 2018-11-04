@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using LibGit2Sharp.Core;
 
@@ -115,7 +117,30 @@ namespace LibGit2Sharp
 
             AppendToPatch(prefix);
             AppendToPatch(decodedContent);
+
+            AddHunk(hunk, prefix + decodedContent);
             return 0;
+        }
+
+        internal void AddHunk(GitDiffHunk hunk, string line)
+        {
+            if (hunk == null)
+                return;
+
+            var h = Hunks.SingleOrDefault(c => c.LineStart == hunk.NewStart && c.OldLineStart == hunk.OldStart);
+            if (h == null)
+            {
+                h = new Hunk
+                {
+                    OldLineStart = hunk.OldStart,
+                    OldLinesLength = hunk.OldLines,
+                    LineStart = hunk.NewStart,
+                    LinesLength = hunk.NewLines
+                };
+                Hunks.Add(h);
+            }
+
+            h.AddLine(line);
         }
 
         private string DebuggerDisplay
@@ -127,6 +152,34 @@ namespace LibGit2Sharp
                                      LinesAdded,
                                      LinesDeleted);
             }
+        }
+
+        public List<Hunk> Hunks { get; set; } = new List<Hunk>();
+    }
+
+    public class Hunk
+    {
+        public int OldLineStart { get; set; }
+        public int LineStart { get; set; }
+        public int OldLinesLength { get; set; }
+        public int LinesLength { get; set; }
+
+        public string Content { get; set; }
+
+        public void AddLine(string line)
+        {
+            Content += line;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is Hunk c)
+                return OldLineStart == c.OldLineStart &&
+                    LineStart == c.LineStart &&
+                    OldLinesLength == c.OldLinesLength &&
+                    LinesLength == c.LinesLength &&
+                    Content == c.Content;
+            return false;
         }
     }
 }

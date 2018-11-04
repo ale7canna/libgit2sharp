@@ -91,7 +91,7 @@ namespace LibGit2Sharp
 
             fullPatchBuilder.Append(formattedOutput);
             currentChange.AppendToPatch(formattedOutput);
-
+            currentChange.AddHunk(hunk, formattedOutput);
             return 0;
         }
 

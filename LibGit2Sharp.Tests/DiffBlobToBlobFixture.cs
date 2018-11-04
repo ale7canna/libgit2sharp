@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text;
 using LibGit2Sharp.Tests.TestHelpers;
 using Xunit;
@@ -59,6 +61,42 @@ namespace LibGit2Sharp.Tests
                  .Append("+16\n");
 
                 Assert.Equal(expected.ToString(), changes.Patch);
+            }
+        }
+
+        [Fact]
+        public void CompareContainsInformationAboutHunks()
+        {
+            var path = SandboxStandardTestRepoGitDir();
+            using (var repo = new Repository(path))
+            {
+                var oldBlob = repo.Lookup<Blob>("7909961");
+                var newBlob = repo.Lookup<Blob>("4e935b7");
+
+                var changes = repo.Diff.Compare(oldBlob, newBlob);
+
+                var hunks = new List<Hunk>
+                {
+                    new Hunk
+                    {
+                        OldLineStart = 1,
+                        LineStart = 1,
+                        OldLinesLength = 4,
+                        LinesLength = 5,
+                        Content = " 1\n+2\n 3\n 4\n 5\n"
+                    },
+                    new Hunk
+                    {
+                        OldLineStart = 8,
+                        LineStart = 9,
+                        OldLinesLength = 8,
+                        LinesLength = 9,
+                        Content = " 8\n 9\n 10\n-12\n+11\n 12\n 13\n 14\n 15\n+16\n"
+                    }
+                };
+
+                Assert.Equal(hunks.First(), changes.Hunks.First());
+                Assert.Equal(hunks.Skip(1).First(), changes.Hunks.Skip(1).First());
             }
         }
 
