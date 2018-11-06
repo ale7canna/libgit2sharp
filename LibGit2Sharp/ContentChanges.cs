@@ -154,7 +154,7 @@ namespace LibGit2Sharp
             }
         }
 
-        public List<Hunk> Hunks { get; set; } = new List<Hunk>();
+        public List<Hunk> Hunks { get; } = new List<Hunk>();
     }
 
     public class Hunk
@@ -164,11 +164,11 @@ namespace LibGit2Sharp
         public int OldLinesLength { get; set; }
         public int LinesLength { get; set; }
 
-        public string Content { get; set; }
+        public List<string> Lines { get; } = new List<string>();
 
         public void AddLine(string line)
         {
-            Content += line;
+            Lines.Add(line.TrimEnd('\n'));
         }
 
         public override bool Equals(object obj)
@@ -178,7 +178,7 @@ namespace LibGit2Sharp
                     LineStart == c.LineStart &&
                     OldLinesLength == c.OldLinesLength &&
                     LinesLength == c.LinesLength &&
-                    Content == c.Content;
+                    Lines.SequenceEqual(c.Lines);
             return false;
         }
     }
