@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Text;
+using FluentAssertions;
 using LibGit2Sharp.Tests.TestHelpers;
 using Xunit;
 
@@ -75,7 +76,7 @@ namespace LibGit2Sharp.Tests
 
                 var changes = repo.Diff.Compare(oldBlob, newBlob);
 
-                var hunks = new List<Hunk>
+                var expected = new List<Hunk>
                 {
                     new Hunk
                     {
@@ -83,7 +84,8 @@ namespace LibGit2Sharp.Tests
                         LineStart = 1,
                         OldLinesLength = 4,
                         LinesLength = 5,
-                        Lines = { " 1", "+2", " 3", " 4", " 5" }
+                        OldContent = { "1", "3", "4", "5" },
+                        Content = { "1", "2", "3", "4", "5" }
                     },
                     new Hunk
                     {
@@ -91,12 +93,48 @@ namespace LibGit2Sharp.Tests
                         LineStart = 9,
                         OldLinesLength = 8,
                         LinesLength = 9,
-                        Lines = {" 8", " 9", " 10", "-12", "+11", " 12", " 13", " 14", " 15", "+16"}
+                        OldContent = { "8", "9", "10", "12", "12", "13", "14", "15"},
+                        Content = { "8", "9", "10", "11", "12", "13", "14", "15", "16"}
                     }
                 };
 
-                Assert.Equal(hunks.First(), changes.Hunks.First());
-                Assert.Equal(hunks.Skip(1).First(), changes.Hunks.Skip(1).First());
+                changes.Hunks.Should().BeEquivalentTo(expected);
+            }
+        }
+
+        [Fact]
+        public void CompareContainsInformationAboutAddedLines()
+        {
+            var path = SandboxStandardTestRepoGitDir();
+            using (var repo = new Repository(path))
+            {
+                var oldBlob = repo.Lookup<Blob>("7909961");
+                var newBlob = repo.Lookup<Blob>("4e935b7");
+
+                var changes = repo.Diff.Compare(oldBlob, newBlob);
+
+                changes.Hunks.First().AddedLines.Should().
+                    BeEquivalentTo(new List<Line>{Line.From("+2", 2)});
+                changes.Hunks.Skip(1).First().AddedLines.Should().
+                    BeEquivalentTo(new List<Line>{Line.From("+11", 12), Line.From("+16", 17)});
+            }
+        }
+
+        [Fact]
+        public void CompareContainsInformationAboutRemovedLines()
+        {
+            var path = SandboxStandardTestRepoGitDir();
+            using (var repo = new Repository(path))
+            {
+                var oldBlob = repo.Lookup<Blob>("7909961");
+                var newBlob = repo.Lookup<Blob>("4e935b7");
+
+                var changes = repo.Diff.Compare(oldBlob, newBlob);
+
+                changes.Hunks.First().RemovedLines.Should().
+                    BeEquivalentTo(new List<Line>());
+                changes.Hunks.Skip(1).First().RemovedLines.Should().
+                    BeEquivalentTo(new List<Line>{Line.From("-12", 11)});
             }
         }
 

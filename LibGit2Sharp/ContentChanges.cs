@@ -164,22 +164,54 @@ namespace LibGit2Sharp
         public int OldLinesLength { get; set; }
         public int LinesLength { get; set; }
 
-        public List<string> Lines { get; } = new List<string>();
+        private readonly List<string> _lines = new List<string>();
+
+        public List<string> OldContent => OldLines.Select(l => l.Content).ToList();
+        public List<string> Content => Lines.Select(l => l.Content).ToList();
+
+        public List<Line> AddedLines => Lines.Where(l => l.Added).ToList();
+        public List<Line> RemovedLines => OldLines.Where(l => l.Removed).ToList();
+
+        private IEnumerable<Line> Lines => LinesByStart(new [] {' ', '+'}, LineStart);
+        private IEnumerable<Line> OldLines => LinesByStart(new [] {' ', '-'}, OldLineStart);
+
+        private IEnumerable<Line> LinesByStart(char[] chars, int lineStart)
+        {
+            return _lines.Where(l => chars.Contains(l.First())).Select((l, i) => Line.From(l, i + lineStart));
+        }
 
         public void AddLine(string line)
         {
-            Lines.Add(line.TrimEnd('\n'));
+            _lines.Add(line.TrimEnd('\n'));
         }
 
         public override bool Equals(object obj)
         {
             if (obj is Hunk c)
                 return OldLineStart == c.OldLineStart &&
-                    LineStart == c.LineStart &&
-                    OldLinesLength == c.OldLinesLength &&
-                    LinesLength == c.LinesLength &&
-                    Lines.SequenceEqual(c.Lines);
+                       LineStart == c.LineStart &&
+                       OldLinesLength == c.OldLinesLength &&
+                       LinesLength == c.LinesLength;
             return false;
+        }
+    }
+
+    public class Line
+    {
+        public string Content { get; set; }
+        public int LineNumber { get; set; }
+        public bool Added { get; set; }
+        public bool Removed { get; set; }
+
+        public static Line From(string line, int lineNumber)
+        {
+            return new Line
+            {
+                Content = line.Substring(1),
+                LineNumber = lineNumber,
+                Added = line.First() == '+',
+                Removed = line.First() == '-'
+            };
         }
     }
 }
